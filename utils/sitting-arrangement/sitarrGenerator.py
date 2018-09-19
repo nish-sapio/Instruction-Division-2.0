@@ -19,9 +19,9 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from functools import partial
 
-room = "room.csv"
+room = "RoomCapacity.csv"
 student = "student.csv"
-exam = "exam.csv"
+exam = "TT.csv"
 
 dates = [] # list containg the dates on which exams are conducted
 roomfields, studentfields, examfields = [], [], [] # list containing the heading of the columns of the respective lists
@@ -29,6 +29,9 @@ rooms, students, exams = [], [], [] # list containg the data imported from csv f
 pExam = [] # a dynamic list containing the information of the exams conducted at a particular date and session.
 examstudents = [] # a dynamic list containing the info of the students enrolled in a particular course.
 sitting = [] #final list output
+allotrooms = []
+labs=[]
+sessions = []
 
 headings = ["Course ID", "Course name", "Date", "Session", "Room", "Number", "Starting ID", "Ending ID"]
 sitting.append(headings)
@@ -71,54 +74,52 @@ with open(exam, 'r') as exam:
 			row[4] = row[4].replace(" ","")
 			row[5]=row[5].replace(",","")
 			row[5] = int(row[5])
-			row[2] = datetime.strptime(row[2], '%d-%m-%Y')
 			row.append([])
+			row.append(row[5])
 			exams.append(row)
-
+		else:
+			labs.append(row[0])	
 exams.sort(key = lambda x:x[2])
 
-#Exam dates(distinct) list
+#Exam dates and sessions list
 for exam in exams:
 	if not exam[2] in dates:
 		dates.append(exam[2])
-# print(dates)
-
-
-#COUNTS THE NUMBER OF STUDENTS REGISTERED IN THE COURSE
-# def stucounter(exam):		
-# 	count = sum(1 for student in students if student[2] == exam[0])			
-# 	return count
+	if not exam[3] in sessions:
+		sessions.append(exam[3])
 
 #COUNTS THE NUMBER OF STUDENTS IN A PARTICULAR ROOM ENROLLED IN A PARTICULAR COURSE
 def sturoomcounter(cid, room):		
 	count = sum(1 for student in students if student[2] == cid and student[3]==room)			
 	return count
 
-#ROOM SET 
-# xs, s, m, l, xl = [], [], [], [], []
-# for room in rooms:
-# 	if room[0].startswith("G"):
-# 		l.append(room)
-# 	if room[0].startswith("F") or room[0].startswith("G"):
-# 		xl.append(room)
-# 	if room[0].startswith("F1") :
-# 		m.append(room)	
-# 	if room[1]<30:
-# 		xs.append(room)
-# 	elif room[1] >30 and room[1]<50:
-# 		s.append(room)
-
-# def roomallot(exam):
-# 	if exam[4]<30:
-# 		return [xs,s,m,l,xl] 
-# 	elif exam[4]>30 and exam[4]<100:
-# 		return [s,xs,m,l,xl]
-# 	elif exam[4]>100 and exam[4]<450:
-# 		return [m,s,xs,l,xl]
-# 	elif exam[4]>450 and exam[4]<600:
-# 		return [l,m,s,xs,xl]
-# 	else: 
-# 		return [xl,l,m,s,xs]
+#PREPARES THE SET OF THE ROOMS BOOKED FOR A PARTICULAR SESSION
+# def examroomGenerator(pexam, exam):
+	# roomset = []
+	# exclusive, common = [],[]
+	# exclusiveSet, commonSet =[], []
+	# for col in pexam:
+	# 	if not col[0] == exam[0]:	
+	# 		Rooms = col[4].split(",")
+	# 		for room in Rooms:
+	# 			if not room in roomset:
+	# 				roomset.append(room)
+	# ar = exam[4].split(",")
+	# for room in ar:
+	# 	if not room in roomset:
+	# 		exclusive.append(room)
+	# 	else:
+	# 		common.append(room)
+	# for room in rooms:
+	# 	if room[0] in exclusive:
+	# 		exclusiveSet.append(room)
+	# 	elif room[0] in common:
+	# 		commonSet.append(room)
+	# exclusiveSet.sort(key = lambda x:x[1])
+	# commonSet.sort(key = lambda x:x[1])
+	# exclusiveSet.reverse()
+	# commonSet.reverse()
+	# return exclusiveSet + commonSet
 
 # ROOM REFRESHMENT
 def roomrefresh():
@@ -153,41 +154,39 @@ def fillstudent(exam,room,examstudents, counter, roomrange):
 
 #ALGORITHM
 for date in dates:
-	for session in ["9.00 -- 10.30 AM","11.00 -- 12.30 PM","1.30 -- 3.00 PM","3.30 -- 5.00 PM"]: 
+	for session in sessions: 
 		pExam.clear()
 		roomrefresh()
 		for exam in exams:
 			if exam[2]==date and exam[3] ==session:
 				pExam.append(exam)
-		
-		#for exam in pExam: 
-		# 	exam.append(stucounter(exam))
-		# 	exam.append([])
 
 		pExam.sort(key = lambda x:x[5])
 		pExam.reverse()
-
+		# print(date, "   ",session,"\n")
+		# for exam in pExam:
+		# 	print(exam)
+		# print("\n")	
+		
 		for exam in pExam:
 			examstudents.clear()
-
 			
+			examroom = []
+			Rooms = exam[4].split(",")
+			# print(Rooms, "\n\n")
+			for room in rooms:
+				if room[0] in Rooms:
+					examroom.append(room)
+			examroom.sort()
+
 			for student in students:
 				if student[2] == exam[0]:
 					examstudents.append(student)
 			
 			examstudents.sort()
-			# allot = roomallot(exam)
-			# for roomset in allot:
-					
-			# 	if exam[4] == 0:
-			# 		break
-			roomset= exam[4].split(",")
-			allotrooms = []
-			for room in rooms:
-				if room[0] in roomset:
-					allotrooms.append(room)
-			for room in allotrooms:
-				room[0].replace(" ","")
+
+			for room in examroom:
+				room[0] = room[0].replace(" ","")
 				roomrange = []
 				counter = 0
 				if exam[5]==0:
@@ -200,21 +199,19 @@ for date in dates:
 				else:
 					fillstudent(exam, room, examstudents, counter,roomrange)
 
-
-# exams.sort()
-# for exam in exams:
-# 	print(exam)
-
+exams.sort()
 
 for exam in exams:
 	for allot in exam[6]:
-		sitting.append([exam[0], exam[1], "{:%d/%m/%Y}".format(exam[2]), exam[3], allot[0][1],str(sturoomcounter(exam[0], allot[0][1])), allot[0][2], allot[0][3]])
-
+		if sturoomcounter(exam[0], allot[0][1]) == exam[7]:
+			allot[0][2] = "All the Students"
+			allot[0][3] = ""
+		sitting.append([exam[0], exam[1], exam[2], exam[3], allot[0][1],str(sturoomcounter(exam[0], allot[0][1])), allot[0][2], allot[0][3]])
 
 repeatid = []
 for subject in sitting:
 	if subject[0] == "Course ID":
-		continue
+		continue		
 	if subject[0] in repeatid:
 		subject[0], subject[1], subject[2], subject[3] = "", "", "", ""
 	else:
@@ -222,12 +219,29 @@ for subject in sitting:
 
 
 #WRITING THE PDF FILE OF SITTING ARRANGEMENT
-
+doc = SimpleDocTemplate(("sitting-arrangement.pdf"), pagesize=A4)
 t = Table(sitting, repeatRows= 1, 
 	style= [('GRID',(0,0),(-1,-1),1,colors.black),
-			('FONTSIZE',(0,0),(-1,-1),8)])
+			('FONTSIZE',(0,0),(-1,-1),6)])
 elements = []
 elements.append(t)
 doc.build(elements)
 print("The file is created as sitting-arrangement.pdf.")
-	
+
+#WRITING THE SEATING ARRANGEMENT TO CSV FILE:
+file = open("seating.csv", "w")
+with file:
+	writer = csv.writer(file)
+	writer.writerows(sitting)
+#WRITING THE DATA OF UNALLOTTED STUDENTS TO CSV:
+unallot = []
+
+for student in students:
+	if student[3] == "" and not student[2] in labs:
+		unallot.append(student)
+unallot.sort(key = lambda x:x[2])
+
+file1 = open("unallot.csv", "w")
+with file1:
+	writer = csv.writer(file1)
+	writer.writerows(unallot)
